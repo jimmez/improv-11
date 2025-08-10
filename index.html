@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,7 +6,7 @@
   <title>Prompt Generator (10 Lists)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <style>
-    :root { --maxw: 480px; }
+    :root { --maxw: 520px; }
 
     body {
       margin: 0;
@@ -65,7 +66,7 @@
       background: #333;
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
       touch-action: manipulation;
     }
@@ -269,16 +270,20 @@
       padding-bottom: 16px;
     }
 
-    /* Sequence panel (always visible) */
+    /* Sequence panel (letters + names) */
     .seq-btn {
       position: relative;
       background: #1a1a1a;
       border: 1px solid #333;
-      border-radius: 10px;
-      padding: 6px 10px;
+      border-radius: 12px;
+      padding: 8px 10px 10px;
       font-size: 13px;
-      min-width: 46px;
+      min-width: 90px;
       color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
     }
     .seq-btn.active {
       border-color: #0a84ff;
@@ -300,6 +305,7 @@
       pointer-events: none;
     }
     .seq-btn.active .seq-badge { display: flex; }
+    .seq-name { font-size: 11px; color: #ccc; text-align: center; line-height: 1.1; max-width: 130px; }
 
     .sequence-controls {
       display: flex;
@@ -349,13 +355,14 @@
       #stamp { font-size: 10.5px; }
       .name-field input { width: 115px; }
       #voiceReadout { min-width: 120px; }
+      .seq-btn { min-width: 80px; }
     }
   </style>
 </head>
 <body>
 
   <!-- Note -->
-  <div id="stamp">jimmy james - 10.08.2025 - kl 13:26 - v.06</div>
+  <div id="stamp">jimmy james - 10.08.2025 - kl 13:26 - v.08</div>
 
   <div class="controls">
 
@@ -374,7 +381,7 @@
     <!-- Inline rename panel (A–J) -->
     <div id="namesPanel" class="names-panel" aria-label="Rename lists"></div>
 
-    <!-- Sequence panel (always visible; tap to set order) -->
+    <!-- Sequence panel (shows list names on buttons) -->
     <div id="sequencePanel" class="sequence-panel" aria-label="Select lists for sequence"></div>
     <div class="sequence-controls">
       <button id="resetSeqBtn" title="Clear all selections">♻️ Reset</button>
@@ -460,7 +467,7 @@
     let volume = 1.0; // 0..1
     let rate = 1.0;   // 0.6..1.6
 
-    // sequence of letters in chosen order (always-on)
+    // sequence of letters in chosen order
     let combineSequence = []; // e.g., ["A","C","D"]
 
     let voicePool = [];                 // up to 5 English voices
@@ -525,7 +532,7 @@
       });
     }
 
-    // Sequence selection buttons (letters)
+    // Sequence selection buttons (letters + names)
     function buildSequencePanel() {
       sequencePanel.innerHTML = '';
       LETTERS.forEach(l => {
@@ -533,7 +540,7 @@
         btn.className = 'seq-btn';
         btn.dataset.letter = l;
         btn.id = 'seq_' + l;
-        btn.innerHTML = coloredLetterSpan(l);
+        setSeqBtnContent(btn, l);
         const badge = document.createElement('div');
         badge.className = 'seq-badge';
         badge.textContent = '';
@@ -543,6 +550,22 @@
           toggleSeqLetter(l);
         });
         sequencePanel.appendChild(btn);
+      });
+      refreshSequenceBadges();
+    }
+
+    function setSeqBtnContent(btn, l){
+      const name = escapeHtml(getListName(l));
+      btn.innerHTML = `${coloredLetterSpan(l)}<div class="seq-name">${name}</div>`;
+    }
+
+    function updateSequenceButtonTexts(){
+      LETTERS.forEach(l => {
+        const btn = document.getElementById('seq_' + l);
+        if (!btn) return;
+        const badge = btn.querySelector('.seq-badge');
+        setSeqBtnContent(btn, l);
+        if (badge) btn.appendChild(badge);
       });
       refreshSequenceBadges();
     }
@@ -577,13 +600,14 @@
       } catch(e){ combineSequence = []; }
 
       updateListButtonsTexts();
+      updateNameInputs();
+      updateSequenceButtonTexts();
       updateSoundButton();
       updateAutoButton();
       updateVolumeUI();
       updateRateUI();
       updateVoiceButtonUI();
       updateAudioStatus();
-      refreshSequenceBadges();
 
       // default timing highlight
       highlightTimerButton('timeBtn10');
@@ -607,6 +631,7 @@
     function saveNames() {
       localStorage.setItem('promptListNames', JSON.stringify(names));
       updateListButtonsTexts();
+      updateSequenceButtonTexts();
       if (document.getElementById('modal').style.display === 'flex') {
         document.getElementById('modalListLabel').textContent = getListName(currentList);
       }
@@ -652,10 +677,10 @@
         const idx = combineSequence.indexOf(l);
         if (idx >= 0) {
           btn.classList.add('active');
-          badge.textContent = String(idx + 1);
+          if (badge) badge.textContent = String(idx + 1);
         } else {
           btn.classList.remove('active');
-          badge.textContent = '';
+          if (badge) badge.textContent = '';
         }
       });
     }
